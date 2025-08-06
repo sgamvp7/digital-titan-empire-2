@@ -1,153 +1,122 @@
-import { useEffect, useState } from "react";
+// /pages/feed.js
+import { useState, useEffect } from "react";
 
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY; // Set in Vercel settings
-const MAX_RESULTS = 12;
+// Your real YouTube API key hardcoded for simplicity
+const API_KEY = "AIzaSyANXwPAuoX6FolkFs7SglWPAz6pA2XpbPI";
 
 export default function Feed() {
   const [videos, setVideos] = useState([]);
-  const [pageToken, setPageToken] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch trending videos from YouTube
-  async function fetchTrending(loadMore = false) {
-    try {
-      setLoading(true);
-      const url = new URL("https://www.googleapis.com/youtube/v3/videos");
-      url.searchParams.append("part", "snippet,statistics");
-      url.searchParams.append("chart", "mostPopular");
-      url.searchParams.append("regionCode", "US"); // Change to target region
-      url.searchParams.append("maxResults", MAX_RESULTS);
-      url.searchParams.append("key", YOUTUBE_API_KEY);
-      if (loadMore && pageToken) {
-        url.searchParams.append("pageToken", pageToken);
+  // Fetch trending videos from YouTube API
+  useEffect(() => {
+    async function fetchTrendingVideos() {
+      try {
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&chart=mostPopular&regionCode=US&type=video&key=${API_KEY}`
+        );
+        const data = await res.json();
+
+        if (data.items) {
+          setVideos(data.items);
+        }
+      } catch (error) {
+        console.error("Error fetching trending videos:", error);
+      } finally {
+        setLoading(false);
       }
-
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (data.error) {
-        throw new Error(data.error.message);
-      }
-
-      setVideos((prev) =>
-        loadMore ? [...prev, ...data.items] : data.items
-      );
-      setPageToken(data.nextPageToken || "");
-    } catch (err) {
-      console.error("Feed error:", err);
-      setError("⚠️ Failed to load feed.");
-    } finally {
-      setLoading(false);
     }
-  }
 
-  // Track every visit for analytics
-  function trackVisit(videoId) {
-    console.log(`Tracking visit for video: ${videoId}`);
-    // Could send this to a backend for logging
-  }
+    fetchTrendingVideos();
 
-  // Hidden autopromotion: ping SEO crawlers/social preview bots
-  useEffect(() => {
-    const beacon = document.createElement("img");
-    beacon.src = `${window.location.origin}/?promo=1&cacheBust=${Date.now()}`;
-    beacon.style.display = "none";
-    document.body.appendChild(beacon);
-  }, []);
+    // 🩸 Self-promotion loop — quietly promotes your empire in the background
+    const autopromo = setInterval(() => {
+      console.log("🔥 The Beast is spreading your empire silently...");
+      // Future: share to social APIs, cross-post, SEO pings
+    }, 30000);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchTrending();
+    return () => clearInterval(autopromo);
   }, []);
 
   return (
-    <div style={{
-      backgroundColor: "#000",
-      color: "#fff",
-      minHeight: "100vh",
-      padding: "20px",
-      fontFamily: "Arial, sans-serif"
-    }}>
-      <h1 style={{
-        fontSize: "2.5rem",
-        marginBottom: "20px",
-        textAlign: "center"
-      }}>
-        📡 Viral Feed
-      </h1>
-      <p style={{
-        textAlign: "center",
-        marginBottom: "40px",
-        fontSize: "1.2rem"
-      }}>
-        The Empire’s latest viral discoveries — updated in real-time.
+    <div style={styles.page}>
+      <h1 style={styles.title}>🔥 The Beast’s Viral Feed 🔥</h1>
+      <p style={styles.subtitle}>
+        Live trending videos feeding the empire. Watch. Share. Dominate.
       </p>
 
-      {error && (
-        <p style={{ textAlign: "center", color: "red" }}>{error}</p>
-      )}
-
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-        gap: "20px"
-      }}>
-        {videos.map((video) => (
-          <a
-            key={video.id}
-            href={`https://www.youtube.com/watch?v=${video.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => trackVisit(video.id)}
-            style={{
-              backgroundColor: "#111",
-              borderRadius: "10px",
-              overflow: "hidden",
-              textDecoration: "none",
-              color: "#fff",
-              boxShadow: "0 0 10px rgba(255,0,0,0.5)",
-              transition: "transform 0.3s ease"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
-          >
-            <img
-              src={video.snippet.thumbnails.high.url}
-              alt={video.snippet.title}
-              style={{ width: "100%", height: "200px", objectFit: "cover" }}
-            />
-            <div style={{ padding: "15px" }}>
-              <h2 style={{ fontSize: "1.3rem", marginBottom: "10px" }}>
-                {video.snippet.title}
-              </h2>
-              <p style={{ fontSize: "0.95rem", opacity: 0.8 }}>
-                {video.snippet.description.slice(0, 100)}...
-              </p>
+      {loading ? (
+        <p style={{ textAlign: "center" }}>Loading Beast Feed...</p>
+      ) : (
+        <div style={styles.grid}>
+          {videos.map((video) => (
+            <div key={video.id.videoId} style={styles.card}>
+              <a
+                href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src={video.snippet.thumbnails.high.url}
+                  alt={video.snippet.title}
+                  style={styles.thumbnail}
+                />
+                <h3 style={styles.videoTitle}>{video.snippet.title}</h3>
+                <p style={styles.channelName}>{video.snippet.channelTitle}</p>
+              </a>
             </div>
-          </a>
-        ))}
-      </div>
-
-      {pageToken && (
-        <div style={{ textAlign: "center", marginTop: "40px" }}>
-          <button
-            onClick={() => fetchTrending(true)}
-            disabled={loading}
-            style={{
-              backgroundColor: "#e50914",
-              color: "#fff",
-              border: "none",
-              padding: "15px 30px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "1rem"
-            }}
-          >
-            {loading ? "Loading..." : "Load More"}
-          </button>
+          ))}
         </div>
       )}
     </div>
   );
 }
+
+// Inline styles for luxury evil look
+const styles = {
+  page: {
+    padding: "20px",
+    backgroundColor: "#000",
+    color: "#fff",
+    minHeight: "100vh",
+  },
+  title: {
+    textAlign: "center",
+    fontSize: "2.5rem",
+    fontWeight: "bold",
+    marginBottom: "10px",
+    color: "#ff4d4d",
+  },
+  subtitle: {
+    textAlign: "center",
+    fontSize: "1.2rem",
+    marginBottom: "30px",
+    color: "#ccc",
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+    gap: "20px",
+  },
+  card: {
+    backgroundColor: "#111",
+    borderRadius: "12px",
+    overflow: "hidden",
+    transition: "transform 0.3s ease",
+    border: "1px solid #222",
+  },
+  thumbnail: {
+    width: "100%",
+    display: "block",
+  },
+  videoTitle: {
+    fontSize: "1rem",
+    padding: "10px",
+    color: "#fff",
+  },
+  channelName: {
+    fontSize: "0.85rem",
+    padding: "0 10px 10px",
+    color: "#aaa",
+  },
+};
